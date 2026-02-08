@@ -391,6 +391,8 @@
 
     let noPos = { x: 0.62, y: 0.62 }; // relative within arena
     let accepted = false;
+    let noAttempts = 0;
+    const MAX_NO_ATTEMPTS = 5;
 
     function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 
@@ -401,6 +403,20 @@
       noBtn.style.top  = (noPos.y * 100) + '%';
     }
 
+    function isCornered(){
+  return (
+    noPos.x < 0.12 ||
+    noPos.x > 0.88 ||
+    noPos.y < 0.22 ||
+    noPos.y > 0.82
+  );
+}
+
+function teleportNoCenterish(){
+  const newX = 0.35 + Math.random() * 0.30;
+  const newY = 0.35 + Math.random() * 0.30;
+  placeNoButton(newX, newY);
+}
     function getArenaRect(){ return arena.getBoundingClientRect(); }
 
     function distance(a, b){
@@ -410,40 +426,63 @@
     }
 
     function escape(pointerClientX, pointerClientY){
-      if (accepted) return;
+  if (accepted) return;
 
-      const rect = getArenaRect();
-      const px = (pointerClientX - rect.left) / rect.width;
-      const py = (pointerClientY - rect.top) / rect.height;
+  const rect = getArenaRect();
+  if (!rect.width || !rect.height) return;
 
-      // Current center of "No" button in relative coords
-      const nx = noPos.x;
-      const ny = noPos.y;
+  // Normalize pointer position into arena space
+  let px = (pointerClientX - rect.left) / rect.width;
+  let py = (pointerClientY - rect.top) / rect.height;
 
-      // If pointer gets close, move away
-      const d = distance({x:px, y:py}, {x:nx, y:ny});
+  // Clamp so math still works even if pointer is outside arena
+  px = clamp(px, 0, 1);
+  py = clamp(py, 0, 1);
 
-      // Threshold scales a bit with arena size
-      const threshold = 0.25;
+  const nx = noPos.x;
+  const ny = noPos.y;
 
-      if (d < threshold){
-        // Move in the opposite direction from the pointer, plus some randomness
-        const awayX = (nx - px);
-        const awayY = (ny - py);
-        const mag = Math.max(0.0001, Math.sqrt(awayX*awayX + awayY*awayY));
-        const ux = awayX / mag;
-        const uy = awayY / mag;
+  // --- CORNER PANIC (desktop + mobile) ---
+  const cornered =
+    nx < 0.12 || nx > 0.88 ||
+    ny < 0.22 || ny > 0.82;
 
-        const jitterX = (Math.random() - 0.5) * 0.20;
-        const jitterY = (Math.random() - 0.5) * 0.20;
+  if (cornered) {
+    // teleport somewhere safer near the middle
+    placeNoButton(
+      0.35 + Math.random() * 0.30,
+      0.35 + Math.random() * 0.30
+    );
+    return;
+  }
 
-        const step = 0.22; // how far it jumps
-        const newX = nx + ux * step + jitterX;
-        const newY = ny + uy * step + jitterY;
+  const d = distance({ x: px, y: py }, { x: nx, y: ny });
 
-        placeNoButton(newX, newY);
-      }
-    }
+  // Detect mobile / touch
+  const isTouch = window.matchMedia("(pointer: coarse)").matches;
+
+  // Much more dramatic on mobile
+  const threshold = isTouch ? 0.42 : 0.25;
+  const step      = isTouch ? 0.55 : 0.22;
+  const jitter    = isTouch ? 0.10 : 0.20;
+
+  if (d < threshold) {
+    // Move directly away from pointer
+    const awayX = nx - px;
+    const awayY = ny - py;
+    const mag = Math.max(0.0001, Math.sqrt(awayX*awayX + awayY*awayY));
+    const ux = awayX / mag;
+    const uy = awayY / mag;
+
+    const jitterX = (Math.random() - 0.5) * jitter;
+    const jitterY = (Math.random() - 0.5) * jitter;
+
+    placeNoButton(
+      nx + ux * step + jitterX,
+      ny + uy * step + jitterY
+    );
+  }
+}
 
 // Desktop: mouse moves anywhere
 document.addEventListener('mousemove', (e) => escape(e.clientX, e.clientY));
@@ -457,7 +496,13 @@ document.addEventListener('touchmove', (e) => {
 function boopNo(e){
   if (accepted) return;
 
-  // prevent tap/click
+  noAttempts++;
+
+  if (noAttempts >= MAX_NO_ATTEMPTS) {
+    alert("stop being a botcher 😤");
+    noAttempts = 0;
+  }
+
   if (e.cancelable) e.preventDefault();
   e.stopPropagation();
 
