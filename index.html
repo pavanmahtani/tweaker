@@ -422,7 +422,7 @@
       const d = distance({x:px, y:py}, {x:nx, y:ny});
 
       // Threshold scales a bit with arena size
-      const threshold = 0.18;
+      const threshold = 0.25;
 
       if (d < threshold){
         // Move in the opposite direction from the pointer, plus some randomness
@@ -444,20 +444,44 @@
     }
 
     // Desktop: mouse moves
-    arena.addEventListener('mousemove', (e) => escape(e.clientX, e.clientY));
-
+document.addEventListener('mousemove', (e) => {
+  escape(e.clientX, e.clientY);
+});
     // Mobile: finger moves
     arena.addEventListener('touchmove', (e) => {
       const t = e.touches[0];
       if (t) escape(t.clientX, t.clientY);
     }, { passive: true });
 
-    // Also jump when hovering/focusing the No button
-    noBtn.addEventListener('mouseenter', (e) => escape(e.clientX, e.clientY));
-    noBtn.addEventListener('focus', () => {
-      const rect = getArenaRect();
-      escape(rect.left + rect.width * Math.random(), rect.top + rect.height * Math.random());
-    });
+    function boopNo(e){
+  if (accepted) return;
+  // Stop the tap from “clicking” the button
+  e.preventDefault?.();
+  e.stopPropagation?.();
+
+  const rect = getArenaRect();
+  // Use the finger position if we have it; otherwise random point in arena
+  const t = e.touches && e.touches[0];
+  const x = t ? t.clientX : (rect.left + rect.width * Math.random());
+  const y = t ? t.clientY : (rect.top + rect.height * Math.random());
+
+  // Make it jump
+  escape(x, y);
+}
+
+.no { -webkit-user-select: none; user-select: none; }
+              
+// iOS/Android reliable
+noBtn.addEventListener('touchstart', boopNo, { passive: false });
+
+// Modern browsers
+noBtn.addEventListener('pointerdown', boopNo);
+
+// Fallback (some browsers still fire click)
+noBtn.addEventListener('click', (e) => {
+  if (!accepted) boopNo(e);
+});
+
 
     // Prevent "No" from being clicked easily (still technically clickable if she tries hard!)
     noBtn.addEventListener('pointerdown', (e) => {
