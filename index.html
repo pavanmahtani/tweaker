@@ -24,6 +24,8 @@
       --shadow2: 0 10px 25px rgba(34,13,22,.08);
       --radius: 26px;
     }
+          .no { -webkit-user-select: none; user-select: none; }
+
 
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
@@ -359,13 +361,13 @@
             </p>
 
             <div class="hug">
-              <!-- Cute hugging animal GIF (external URL). 
-              <img
-                id="hugGif"
-                alt="A cute animal giving a hug"
-                src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExaGNhbjVydDgzNTZtZTRxc2h4eGszZTh1NzUxZG54ZThibzk0djFldCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LLTmEK1dY2sJUvQrlI/giphy.gif"
-                loading="eager"
-              />
+           <!-- Cute hugging animal GIF (external URL). If it ever breaks, replace with another GIF URL. -->
+<img
+  id="hugGif"
+  alt="A cute animal giving a hug"
+  src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExaGNhbjVydDgzNTZtZTRxc2h4eGszZTh1NzUxZG54ZThibzk0djFldCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LLTmEK1dY2sJUvQrlI/giphy.gif"
+  loading="eager"
+/>
             </div>
 
             <button class="reset" id="resetBtn" type="button">
@@ -443,54 +445,35 @@
       }
     }
 
-    // Desktop: mouse moves
-document.addEventListener('mousemove', (e) => {
-  escape(e.clientX, e.clientY);
-});
-    // Mobile: finger moves
-    arena.addEventListener('touchmove', (e) => {
-      const t = e.touches[0];
-      if (t) escape(t.clientX, t.clientY);
-    }, { passive: true });
+// Desktop: mouse moves anywhere
+document.addEventListener('mousemove', (e) => escape(e.clientX, e.clientY));
 
-    function boopNo(e){
+// Mobile: finger moves anywhere
+document.addEventListener('touchmove', (e) => {
+  const t = e.touches && e.touches[0];
+  if (t) escape(t.clientX, t.clientY);
+}, { passive: true });
+
+function boopNo(e){
   if (accepted) return;
-  // Stop the tap from “clicking” the button
-  e.preventDefault?.();
-  e.stopPropagation?.();
+
+  // prevent tap/click
+  if (e.cancelable) e.preventDefault();
+  e.stopPropagation();
 
   const rect = getArenaRect();
-  // Use the finger position if we have it; otherwise random point in arena
   const t = e.touches && e.touches[0];
   const x = t ? t.clientX : (rect.left + rect.width * Math.random());
   const y = t ? t.clientY : (rect.top + rect.height * Math.random());
 
-  // Make it jump
   escape(x, y);
 }
 
-.no { -webkit-user-select: none; user-select: none; }
-              
-// iOS/Android reliable
+// Reliable across iOS/Android + desktop
 noBtn.addEventListener('touchstart', boopNo, { passive: false });
-
-// Modern browsers
 noBtn.addEventListener('pointerdown', boopNo);
+noBtn.addEventListener('click', boopNo);
 
-// Fallback (some browsers still fire click)
-noBtn.addEventListener('click', (e) => {
-  if (!accepted) boopNo(e);
-});
-
-
-    // Prevent "No" from being clicked easily (still technically clickable if she tries hard!)
-    noBtn.addEventListener('pointerdown', (e) => {
-      if (!accepted){
-        e.preventDefault();
-        const rect = getArenaRect();
-        escape(rect.left + rect.width * Math.random(), rect.top + rect.height * Math.random());
-      }
-    });
 
     // --- Yes flow + confetti ---
     function showSuccess(){
